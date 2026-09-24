@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dr. Paulo — Acompanhamento de Publicações OAB</title>
+  <meta name="description" content="Sistema inteligente de acompanhamento de publicações e prazos da OAB integrado ao Recorte Digital e N8N.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='og' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23FF7A00'/%3E%3Cstop offset='100%25' stop-color='%23E55A00'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23og)'/%3E%3Cg fill='none' stroke='%23FFFFFF' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round' transform='translate(10, 10) scale(1.833)'%3E%3Cpath d='m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z'/%3E%3Cpath d='m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z'/%3E%3Cpath d='M7 21h10'/%3E%3Cpath d='M12 3v18'/%3E%3Cpath d='M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2'/%3E%3C/g%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="alternate icon" href="assets/favicon.svg">
+  <link rel="apple-touch-icon" href="assets/favicon.svg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- =========================================================================
+       TELA DE AUTENTICAÇÃO INICIAL (LOGIN, CADASTRO & CONECTAR COM GOOGLE)
+       ========================================================================= -->
+  <div id="auth-screen" class="auth-fullscreen-container">
+    <div class="auth-card">
+      <div class="auth-brand-header">
+        <div class="auth-brand-logo">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+            <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+            <path d="M7 21h10"/>
+            <path d="M12 3v18"/>
+            <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>
+          </svg>
+        </div>
+        <h1 class="auth-app-title">Dr. Paulo <span>.</span></h1>
+        <p class="auth-app-subtitle">Acompanhamento Jurídico OAB/SP & Prazos Processuais</p>
+      </div>
+
+      <!-- ABAS: ENTRAR / CRIAR CONTA -->
+      <div class="auth-tabs-row">
+        <button type="button" class="auth-tab-btn active" id="tab-auth-login">Entrar na Conta</button>
+        <button type="button" class="auth-tab-btn" id="tab-auth-register">Criar Nova Conta</button>
+      </div>
+
+      <!-- BOTÃO OFICIAL GOOGLE -->
+      <div class="auth-social-area">
+        <button type="button" class="btn-google-auth" id="btn-google-login">
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"/>
+            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24Z"/>
+            <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15Z"/>
+            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98Z"/>
+          </svg>
+          <span id="google-auth-text">Continuar com o Google</span>
+        </button>
+      </div>
+
+      <div class="auth-divider">
+        <span>ou acesse com e-mail e senha</span>
+      </div>
+
+      <!-- FORMULÁRIO 1: LOGIN -->
+      <form id="auth-form-login" class="auth-form-box">
+        <div class="form-group">
+          <label class="form-label" for="input-login-email">E-mail de Acesso</label>
+          <input type="email" class="form-control" id="input-login-email" placeholder="seu.email@advocacia.com" required>
+        </div>
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label class="form-label" for="input-login-pass">Senha</label>
+            <button type="button" id="btn-forgot-password" style="background: none; border: none; color: var(--primary-orange); font-size: 0.78rem; font-weight: 600; cursor: pointer; padding: 0;">
+              Esqueceu a senha?
+            </button>
+          </div>
+          <input type="password" class="form-control" id="input-login-pass" placeholder="••••••••" required>
+        </div>
+        <div id="login-error-msg" class="auth-error-msg" style="display: none;"></div>
+        <button type="submit" class="action-btn btn-primary btn-auth-submit">
+          Entrar no Sistema
+        </button>
+      </form>
+
+      <!-- FORMULÁRIO 2: CADASTRO -->
+      <form id="auth-form-register" class="auth-form-box" style="display: none;">
+        <div class="form-group">
+          <label class="form-label" for="input-reg-name">Nome Completo</label>
+          <input type="text" class="form-control" id="input-reg-name" placeholder="Ex: Dra. Mariana Costa" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="input-reg-email">E-mail Profissional</label>
+          <input type="email" class="form-control" id="input-reg-email" placeholder="mariana@advocacia.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="input-reg-pass">Criar Senha</label>
+          <input type="password" class="form-control" id="input-reg-pass" placeholder="Mínimo 4 dígitos" minlength="4" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="input-reg-pass-confirm">Confirmar Senha</label>
+          <input type="password" class="form-control" id="input-reg-pass-confirm" placeholder="Repita a senha" minlength="4" required>
+        </div>
+        <div id="register-error-msg" class="auth-error-msg" style="display: none;"></div>
+        <button type="submit" class="action-btn btn-primary btn-auth-submit">
+          Criar Minha Conta
+        </button>
+        <p class="auth-security-notice">
+          🔒 Por segurança, novas contas são criadas como <strong>Membros da Equipe</strong> para consulta de prazos. O papel de Administrador é concedido exclusivamente pela gestão do escritório.
+        </p>
+      </form>
+
+      <!-- FORMULÁRIO 3: REDEFINIR SENHA -->
+      <form id="auth-form-reset" class="auth-form-box" style="display: none;">
+        <div style="text-align: left; margin-bottom: 2px;">
+          <h4 style="font-size: 1.02rem; font-weight: 700; color: var(--text-main); margin-bottom: 3px;">Redefinir Senha de Acesso</h4>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">
+            Informe seu e-mail cadastrado e digite a nova senha desejada:
+          </p>
+        </div>
+
+        <div class="form-group" style="text-align: left;">
+          <label class="form-label" for="input-reset-email">E-mail Cadastrado</label>
+          <input type="email" class="form-control" id="input-reset-email" placeholder="seu.email@advocacia.com" required>
+        </div>
+        <div class="form-group" style="text-align: left;">
+          <label class="form-label" for="input-reset-pass">Nova Senha</label>
+          <input type="password" class="form-control" id="input-reset-pass" placeholder="Mínimo 4 caracteres" minlength="4" required>
+        </div>
+        <div class="form-group" style="text-align: left;">
+          <label class="form-label" for="input-reset-pass-confirm">Confirmar Nova Senha</label>
+          <input type="password" class="form-control" id="input-reset-pass-confirm" placeholder="Repita a nova senha" minlength="4" required>
+        </div>
+
+        <div id="reset-error-msg" class="auth-error-msg" style="display: none;"></div>
+
+        <button type="submit" class="action-btn btn-primary btn-auth-submit">
+          Salvar Nova Senha & Entrar
+        </button>
+
+        <button type="button" class="action-btn btn-modal-cancel" id="btn-back-to-login" style="width: 100%; justify-content: center; margin-top: 4px;">
+          Voltar para o Login
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="app-container" id="main-app-container">
+    
+    <!-- BARRA LATERAL (SIDEBAR) -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-icon-box">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+            <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+            <path d="M7 21h10"/>
+            <path d="M12 3v18"/>
+            <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Dr. Paulo <span>.</span></h1>
+          <span class="brand-badge">OAB/SP</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-category">Principal</div>
+        <a class="nav-link active" data-tab="dashboard" id="nav-dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="7" height="9" x="3" y="3" rx="1"/>
+            <rect width="7" height="5" x="14" y="3" rx="1"/>
+            <rect width="7" height="9" x="14" y="12" rx="1"/>
+            <rect width="7" height="5" x="3" y="16" rx="1"/>
+          </svg>
+          <span>Dashboard</span>
+        </a>
+
+        <a class="nav-link" data-tab="agenda" id="nav-agenda">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 2v4"/>
+            <path d="M16 2v4"/>
+            <rect width="18" height="18" x="3" y="4" rx="2"/>
+            <path d="M3 10h18"/>
+            <path d="m9 16 2 2 4-4"/>
+          </svg>
+          <span>Agenda & Prazos</span>
+        </a>
+
+        <a class="nav-link" data-tab="emails" id="nav-emails">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="16" x="2" y="4" rx="2"/>
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+          </svg>
+          <span>E-mails Originais</span>
+        </a>
+
+        <div class="nav-category">Administração</div>
+        <a class="nav-link" data-tab="configuracoes" id="nav-configuracoes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          <span>Configurações</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile-badge" id="btn-sidebar-user-badge" style="cursor: pointer;" title="Clique para alternar usuário ou sair">
+          <div class="user-avatar admin-avatar" id="sidebar-user-avatar">AG</div>
+          <div class="user-info">
+            <span class="user-name" id="sidebar-user-name">Administrador</span>
+            <span class="user-role-tag" id="sidebar-user-role">Administrador</span>
+          </div>
+          <svg style="margin-left: auto; width: 16px; height: 16px; color: var(--text-dim);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m6 9 6 6 6-6"/>
+          </svg>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ÁREA PRINCIPAL -->
+    <div class="main-wrapper">
+      
+      <!-- CABEÇALHO SUPERIOR -->
+      <header class="top-header">
+        <div class="header-title-area">
+          <h2 class="page-title" id="header-page-title">Painel Geral</h2>
+        </div>
+
+        <div class="header-actions">
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--color-informativo); background: rgba(16,185,129,0.1); padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(16,185,129,0.2);">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--color-informativo); box-shadow: 0 0 8px var(--color-informativo);"></span>
+            <span>N8N & Google Sheets Sincronizados</span>
+          </div>
+
+          <!-- BOTÃO MODO CLARO / ESCURO GLOBAL NO TOPO -->
+          <button class="theme-toggle-header-btn" id="btn-header-theme-toggle" title="Alternar entre Modo Claro e Escuro">
+            <span id="header-theme-icon">☀️</span>
+            <span id="header-theme-text">Modo Claro</span>
+          </button>
+
+          <button class="action-btn" id="btn-logout" title="Alternar Usuário / Sair">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" x2="9" y1="12" y2="12"/>
+            </svg>
+            <span>Conta</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- CONTEÚDO PRINCIPAL -->
+      <main class="content-area">
+
+        <!-- ===================================================================
+             TELA 1: DASHBOARD
+             =================================================================== -->
+        <section class="page-view active" id="view-dashboard">
+          
+          <!-- CARDS DE MÉTRICAS KPI -->
+          <div class="metrics-grid">
+            <div class="metric-card" style="--card-accent: var(--primary-orange);">
+              <div class="metric-header">
+                <span class="metric-label">Total de Publicações</span>
+                <div class="metric-icon-bubble">📁</div>
+              </div>
+              <div class="metric-number" id="metric-total-pubs">0</div>
+              <div class="metric-subtext">Processos cadastrados no sistema</div>
+            </div>
+
+            <div class="metric-card" style="--card-accent: var(--color-urgente);">
+              <div class="metric-header">
+                <span class="metric-label">Prazos Fatais & Urgentes</span>
+                <div class="metric-icon-bubble" style="background: rgba(239, 68, 68, 0.15); color: #EF4444;">🚨</div>
+              </div>
+              <div class="metric-number" id="metric-urgentes-count" style="color: var(--color-urgente);">0</div>
+              <div class="metric-subtext">Requerem manifestação imediata</div>
+            </div>
+
+            <div class="metric-card" style="--card-accent: #10B981;">
+              <div class="metric-header">
+                <span class="metric-label">WhatsApp Disparados</span>
+                <div class="metric-icon-bubble" style="background: rgba(16, 185, 129, 0.15); color: #10B981;">💬</div>
+              </div>
+              <div class="metric-number" id="metric-pendentes-wpp">0</div>
+              <div class="metric-subtext">Aguardando confirmação do advogado</div>
+            </div>
+
+            <div class="metric-card" style="--card-accent: #3B82F6;">
+              <div class="metric-header">
+                <span class="metric-label">Novas / Não Lidas</span>
+                <div class="metric-icon-bubble" style="background: rgba(59, 130, 246, 0.15); color: #3B82F6;">✉️</div>
+              </div>
+              <div class="metric-number" id="metric-nao-lidos">0</div>
+              <div class="metric-subtext">Publicações pendentes de leitura</div>
+            </div>
+          </div>
+
+          <!-- GRID PRINCIPAL: GRÁFICO + PRAZOS RECENTES -->
+          <div class="dashboard-main-grid">
+            
+            <!-- Painel do Gráfico Configurável -->
+            <div class="dashboard-panel">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <span>📊 Distribuição de Urgência & Prazos</span>
+                </div>
+                <span class="panel-title-badge">Tipo Dinâmico</span>
+              </div>
+              <div class="chart-container-box" id="dashboard-chart-container">
+                <!-- Renderizado via LegalCharts -->
+              </div>
+            </div>
+
+            <!-- Painel de Próximas Publicações -->
+            <div class="dashboard-panel">
+              <div class="panel-header">
+                <div class="panel-title">
+                  <span>⚡ Prazos Mais Próximos</span>
+                </div>
+                <button class="action-btn" onclick="window.appInstance.navigate('agenda')">Ver Todos →</button>
+              </div>
+              <div class="publications-list" id="dashboard-recent-pubs">
+                <!-- Lista de Cards de Publicações Recentes -->
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ===================================================================
+             TELA 2: AGENDA & PRAZOS
+             =================================================================== -->
+        <section class="page-view" id="view-agenda">
+          
+          <!-- BARRA DE LEGENDA DE URGÊNCIA (COMPACTA NA MESMA LINHA) -->
+          <div class="urgency-legend-bar" id="agenda-urgency-legend">
+            <span class="legend-title-tag">⚖️ Legenda:</span>
+            
+            <div class="urgency-legend-pill" style="background: var(--color-urgente-bg); color: var(--color-urgente); border: 1px solid var(--color-urgente);" title="Providência Imediata: Audiência, Liminar, Prisão">
+              <span class="pill-dot" style="background: var(--color-urgente);"></span>
+              <span>Urgente:</span>
+              <span class="urgency-legend-desc">Ação Imediata</span>
+            </div>
+
+            <div class="urgency-legend-pill" style="background: var(--color-prazo-fatal-bg); color: var(--color-prazo-fatal); border: 1px solid var(--color-prazo-fatal);" title="Prazo Preclusivo em Curso: Contestação, Réplica, Recurso">
+              <span class="pill-dot" style="background: var(--color-prazo-fatal);"></span>
+              <span>Prazo Fatal:</span>
+              <span class="urgency-legend-desc">Preclusivo</span>
+            </div>
+
+            <div class="urgency-legend-pill" style="background: var(--color-normal-bg); color: var(--color-normal); border: 1px solid var(--color-normal);" title="Andamento processual e despachos ordinários">
+              <span class="pill-dot" style="background: var(--color-normal);"></span>
+              <span>Normal:</span>
+              <span class="urgency-legend-desc">Andamento</span>
+            </div>
+
+            <div class="urgency-legend-pill" style="background: var(--color-informativo-bg); color: var(--color-informativo); border: 1px solid var(--color-informativo);" title="Decisão Favorável ou Mero Expediente Sem Prazo">
+              <span class="pill-dot" style="background: var(--color-informativo);"></span>
+              <span>Informativo:</span>
+              <span class="urgency-legend-desc">Sem Prazo</span>
+            </div>
+          </div>
+
+          <!-- BARRA DE CONTROLES E FILTROS -->
+          <div class="agenda-controls-bar">
+            <div class="filters-cluster">
+              <input type="text" class="search-input" id="agenda-search-input" placeholder="🔍 Buscar por nº do processo (ex: 1021533), partes, tribunal, vara ou tags...">
+              
+              <select class="filter-select" id="agenda-urgency-filter">
+                <option value="todos">Todas as Urgências</option>
+                <option value="urgente">🚨 Urgente</option>
+                <option value="prazo_fatal">⚡ Prazo Fatal</option>
+                <option value="normal">📌 Normal</option>
+                <option value="informativo">ℹ️ Informativo</option>
+              </select>
+
+              <select class="filter-select" id="agenda-status-filter">
+                <option value="todos">Todos os Status</option>
+                <option value="nao_lido">● Não Lidos</option>
+                <option value="lido">✓ Lidos</option>
+              </select>
+            </div>
+
+            <div class="view-mode-toggle">
+              <button class="view-mode-btn active" id="btn-toggle-tabela">📋 Tabela</button>
+              <button class="view-mode-btn" id="btn-toggle-calendario">📅 Calendário Mensal</button>
+            </div>
+          </div>
+
+          <!-- TAGS DE FILTRO RÁPIDO -->
+          <div class="agenda-tags-bar" id="agenda-quick-tags">
+            <span class="tag-bar-label">Tags Rápidas:</span>
+            <button class="agenda-tag-chip active" data-tag="todos">Todas</button>
+            <button class="agenda-tag-chip" data-tag="urgente">🚨 Urgentes</button>
+            <button class="agenda-tag-chip" data-tag="prazo_fatal">⚡ Prazo Fatal</button>
+            <button class="agenda-tag-chip" data-tag="alvara">#Alvará</button>
+            <button class="agenda-tag-chip" data-tag="replica">#Réplica</button>
+            <button class="agenda-tag-chip" data-tag="intimacao">#Intimação</button>
+            <button class="agenda-tag-chip" data-tag="sentenca">#Sentença</button>
+          </div>
+
+          <!-- VISUALIZAÇÃO EM TABELA -->
+          <div class="agenda-table-card" id="agenda-table-view">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Nº do Processo</th>
+                  <th>Urgência</th>
+                  <th>Tipo de Ato</th>
+                  <th>Tribunal / Vara</th>
+                  <th>Data Limite</th>
+                  <th>Leitura</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="agenda-table-body">
+                <!-- Linhas geradas dinamicamente -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- VISUALIZAÇÃO EM CALENDÁRIO MENSAL INTERATIVO (DRAG & DROP) -->
+          <div class="calendar-view-container" id="agenda-calendar-view">
+            <div class="calendar-header-nav">
+              <div class="calendar-month-title">
+                <span>📅</span>
+                <span id="calendar-current-month-label">Setembro 2026</span>
+                <span class="calendar-month-badge" id="calendar-month-status-badge">Mês Atual</span>
+              </div>
+              <div class="calendar-nav-controls">
+                <button class="cal-today-btn" id="cal-btn-today" title="Voltar ao mês atual">● Mês Atual (Set/2026)</button>
+                <div class="cal-arrow-group">
+                  <button class="cal-arrow-btn" id="cal-btn-prev" title="Mês Anterior" aria-label="Mês Anterior">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                  </button>
+                  <button class="cal-arrow-btn" id="cal-btn-next" title="Próximo Mês" aria-label="Próximo Mês">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="calendar-weekdays-grid">
+              <div class="cal-weekday-label">Dom</div>
+              <div class="cal-weekday-label">Seg</div>
+              <div class="cal-weekday-label">Ter</div>
+              <div class="cal-weekday-label">Qua</div>
+              <div class="cal-weekday-label">Qui</div>
+              <div class="cal-weekday-label">Sex</div>
+              <div class="cal-weekday-label">Sáb</div>
+            </div>
+
+            <div class="calendar-days-grid" id="calendar-days-container">
+              <!-- Dias gerados dinamicamente via JS -->
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ===================================================================
+             TELA 3: E-MAILS ORIGINAIS (RECORTE DIGITAL OAB/SP)
+             =================================================================== -->
+        <section class="page-view" id="view-emails">
+          <div class="emails-split-layout">
+            
+            <!-- Coluna Esquerda: Lista de Emails com Filtros de Urgência -->
+            <div class="emails-list-pane">
+              <div class="emails-pane-header">
+                <div>
+                  <strong>Caixa de Entrada OAB</strong>
+                  <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">Recorte Digital OAB/SP</div>
+                </div>
+                <span class="brand-badge">BOL Mail</span>
+              </div>
+
+              <!-- Filtro rápido na lista de emails -->
+              <div style="padding: 10px 12px; border-bottom: 1px solid var(--border-subtle); display: flex; gap: 8px;">
+                <input type="text" class="search-input" id="email-search-input" placeholder="🔍 Filtrar e-mails..." style="min-width: 100%; font-size: 0.8rem; padding: 8px 12px;">
+              </div>
+
+              <div class="emails-scrollable" id="emails-list-container">
+                <!-- Itens da lista de e-mails com Badges de Urgência -->
+              </div>
+            </div>
+
+            <!-- Coluna Direita: Leitura do E-mail e Documento Oficial (PDF) -->
+            <div class="email-view-pane" id="email-reading-pane">
+              <!-- Conteúdo renderizado dinamicamente com abas de PDF e Texto Oficial -->
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ===================================================================
+             TELA 4: CONFIGURAÇÕES & ADMINISTRAÇÃO
+             =================================================================== -->
+        <section class="page-view" id="view-configuracoes">
+          
+          <div id="member-customization-notice" style="display: none; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: 14px 20px; border-radius: var(--radius-md); margin-bottom: 24px; color: var(--text-main);">
+            👤 <strong>Conta de Membro:</strong> Você pode personalizar as cores do tema, cores de urgência e tipo de gráfico para a sua visualização pessoal. As configurações padrão da equipe são gerenciadas pelo Administrador.
+          </div>
+
+          <div class="settings-grid">
+            
+            <!-- Cartão 1: Tipo de Gráfico -->
+            <div class="settings-card">
+              <div class="settings-card-title">
+                <span>📈 Tipo de Gráfico do Dashboard</span>
+              </div>
+              <div class="settings-card-desc">
+                Escolha o estilo de visualização de métricas do seu painel principal.
+              </div>
+              <div class="form-group">
+                <select class="form-control" id="setting-chart-type">
+                  <option value="donut">🍩 Gráfico Donut Executivo (Circular)</option>
+                  <option value="hbar">📊 Barras Horizontais com Indicadores (Recomendado)</option>
+                  <option value="timeline">📈 Linha de Tendência & Curva de Prazos (Spline)</option>
+                  <option value="bar">🏛️ Colunas Verticais de Volume</option>
+                  <option value="radial">🎯 Medidores Radiais Concêntricos</option>
+                  <option value="cards">🗂️ Matriz de Risco em Cards</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Cartão 2: Cores do Tema -->
+            <div class="settings-card">
+              <div class="settings-card-title">
+                <span>🎨 Cores do Tema</span>
+              </div>
+              <div class="settings-card-desc">
+                Personalize a cor de destaque principal. A alternância de <strong>Modo Claro / Escuro</strong> agora está convenientemente localizada no topo da página para acesso imediato em qualquer tela.
+              </div>
+              <div class="settings-row">
+                <span class="form-label">Cor de Destaque Primária</span>
+                <div class="color-picker-group">
+                  <input type="color" class="color-input-bubble" id="setting-primary-color" value="#FF7A00">
+                </div>
+              </div>
+              <div style="margin-top: 14px; font-size: 0.8rem; color: var(--text-dim); display: flex; align-items: center; gap: 8px;">
+                <span>💡 Dica: Use o botão de modo claro/escuro no topo do cabeçalho a qualquer momento.</span>
+              </div>
+            </div>
+
+            <!-- Cartão 3: Cores de Urgência da Agenda -->
+            <div class="settings-card">
+              <div class="settings-card-title">
+                <span>🚨 Cores dos Níveis de Urgência</span>
+              </div>
+              <div class="settings-card-desc">
+                Personalize a cor associada a cada nível de prazo na agenda e nos gráficos.
+              </div>
+              <div class="settings-row">
+                <span>Urgente</span>
+                <input type="color" class="color-input-bubble" id="setting-urgente-color" value="#EF4444">
+              </div>
+              <div class="settings-row">
+                <span>Prazo Fatal</span>
+                <input type="color" class="color-input-bubble" id="setting-prazo-fatal-color" value="#F97316">
+              </div>
+              <div class="settings-row">
+                <span>Normal / Andamento</span>
+                <input type="color" class="color-input-bubble" id="setting-normal-color" value="#3B82F6">
+              </div>
+              <div class="settings-row">
+                <span>Informativo</span>
+                <input type="color" class="color-input-bubble" id="setting-info-color" value="#10B981">
+              </div>
+            </div>
+
+            <!-- Cartão 4: Integração Google Sheets & N8N -->
+            <div class="settings-card">
+              <div class="settings-card-title">
+                <span>📊 Fonte de Dados Google Sheets</span>
+              </div>
+              <div class="settings-card-desc">
+                Conexão direta com a planilha alimentada pela automação N8N.
+              </div>
+              <div style="font-size: 0.85rem; background: var(--bg-app); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 8px;">
+                <div><strong>ID da Planilha:</strong> <code>1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU</code></div>
+                <div><strong>Abas:</strong> <code>Controles OAB</code> e <code>Pendentes de Respostas</code></div>
+                <div><strong>Modo:</strong> Leitura & Escrita (Atualização de Status)</div>
+              </div>
+            </div>
+
+            <!-- Seção de Ações de Salvamento -->
+            <div style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; background: var(--bg-card); padding: 20px 24px; border-radius: var(--radius-lg); border: 1px solid var(--border-card);">
+              <div id="admin-global-save-option" style="display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" id="chk-save-global" style="width: 18px; height: 18px; accent-color: var(--primary-orange); cursor: pointer;">
+                <label for="chk-save-global" style="font-size: 0.9rem; font-weight: 600; cursor: pointer;">
+                  Salvar estas cores como PADRÃO GLOBAL para todos os membros (Administrador)
+                </label>
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <button type="button" class="btn-reset-settings" id="btn-reset-settings" title="Restaurar todas as cores, temas e gráficos para os padrões de fábrica">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                    <path d="M3 3v5h5"/>
+                  </svg>
+                  <span>Resetar Configurações</span>
+                </button>
+                <button class="action-btn btn-primary" id="btn-save-settings">💾 Salvar Configurações</button>
+              </div>
+            </div>
+
+            <!-- Cartão 5: Gestão de Contas de Usuário (Apenas Administrador) -->
+            <div class="users-table-box" id="admin-users-section">
+              <div class="panel-header">
+                <div>
+                  <div class="panel-title">👥 Gestão de Contas de Acesso</div>
+                  <div class="settings-card-desc" style="margin-bottom: 0;">
+                    Cadastro fechado por convite. Apenas o Administrador pode criar e gerenciar perfis.
+                  </div>
+                </div>
+                <button class="action-btn btn-primary" id="btn-open-new-user-modal">+ Novo Usuário</button>
+              </div>
+
+              <table class="data-table" style="margin-top: 16px;">
+                <thead>
+                  <tr>
+                    <th>Usuário</th>
+                    <th>Papel (Role)</th>
+                    <th>Último Acesso</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="users-table-body">
+                  <!-- Gerado dinamicamente -->
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+  </div>
+
+  <!-- =========================================================================
+       MODAL: DETALHES DA PUBLICAÇÃO JURÍDICA
+       ========================================================================= -->
+  <div class="modal-overlay" id="pub-details-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">Detalhes da Publicação</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Preenchido dinamicamente -->
+      </div>
+      <div class="modal-footer">
+        <!-- Ações do modal -->
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: NOVO USUÁRIO (ADMIN)
+       ========================================================================= -->
+  <div class="modal-overlay" id="new-user-modal">
+    <div class="modal-box" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Criar Nova Conta de Usuário</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="form-new-user">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="new-user-name">Nome Completo</label>
+            <input type="text" class="form-control" id="new-user-name" placeholder="Ex: Dr. Paulo" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="new-user-email">E-mail Profissional</label>
+            <input type="email" class="form-control" id="new-user-email" placeholder="nome@drpaulo.adv.br" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="new-user-role">Nível de Permissão (Papel)</label>
+            <select class="form-control" id="new-user-role">
+              <option value="membro">Membro (Somente Leitura e Personalização Pessoal)</option>
+              <option value="admin">Administrador (Controle Total e Padrão Global)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="new-user-pass">Senha Inicial</label>
+            <input type="password" class="form-control" id="new-user-pass" value="123456" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="action-btn modal-close-btn" style="width: auto; border-radius: var(--radius-md); font-size: 0.88rem; height: auto;">Cancelar</button>
+          <button type="submit" class="action-btn btn-primary">Cadastrar Usuário</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+
+  <!-- =========================================================================
+       MODAL: MEU PERFIL & SESSÃO SEGURA
+       ========================================================================= -->
+  <div class="modal-overlay" id="user-profile-modal">
+    <div class="modal-box" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Perfil do Usuário Conectado</h3>
+        <button type="button" class="modal-close-btn" id="btn-close-profile-modal" title="Fechar">&times;</button>
+      </div>
+      <div class="modal-body" id="user-profile-modal-body">
+        <!-- Preenchido dinamicamente com dados da sessão ativa -->
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="action-btn btn-modal-cancel" id="btn-close-profile-action">
+          Fechar
+        </button>
+        <button type="button" class="action-btn btn-modal-danger" id="btn-profile-logout">
+          🚪 Sair da Conta
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL DE CONFIRMAÇÃO PERSONALIZADO (SEM POPUP NATIVO DO WINDOWS)
+       ========================================================================= -->
+  <div class="modal-overlay" id="custom-confirm-modal">
+    <div class="modal-box confirm-modal-box">
+      <div class="confirm-icon-wrapper" id="confirm-modal-icon">🚪</div>
+      <h3 class="confirm-modal-title" id="confirm-modal-title">Encerrar Sessão</h3>
+      <p class="confirm-modal-text" id="confirm-modal-text">Deseja realmente sair da sua conta e retornar à tela inicial de login?</p>
+      
+      <div class="confirm-modal-actions">
+        <button type="button" class="action-btn btn-modal-cancel" id="btn-confirm-modal-cancel">Cancelar</button>
+        <button type="button" class="action-btn btn-modal-danger" id="btn-confirm-modal-ok">Sim, Sair da Conta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL DE AUTENTICAÇÃO ADMINISTRATIVA (PARA ALTERNAR MEMBRO -> ADMIN)
+       ========================================================================= -->
+  <div class="modal-overlay" id="modal-admin-auth">
+    <div class="modal-box confirm-modal-box" style="max-width: 420px; text-align: left;">
+      <div class="confirm-icon-wrapper" style="background: rgba(217, 119, 6, 0.15); border-color: rgba(217, 119, 6, 0.35); align-self: center;">🛡️</div>
+      <h3 class="confirm-modal-title" style="text-align: center; width: 100%;">Acesso de Administrador</h3>
+      <p class="confirm-modal-text" style="text-align: center; width: 100%;">
+        Para alterar o papel desta conta para <strong>Administrador</strong>, informe a senha administrativa de segurança:
+      </p>
+
+      <form id="form-admin-auth-pin" style="width: 100%; display: flex; flex-direction: column; gap: 12px; margin-top: 6px;">
+        <div class="form-group">
+          <label class="form-label" for="input-admin-auth-pass">Senha de Administrador</label>
+          <input type="password" class="form-control" id="input-admin-auth-pass" placeholder="••••••••" required autofocus>
+        </div>
+        <div id="admin-auth-error-msg" class="auth-error-msg" style="display: none;"></div>
+
+        <div class="confirm-modal-actions" style="margin-top: 8px;">
+          <button type="button" class="action-btn btn-modal-cancel" id="btn-cancel-admin-auth">Cancelar</button>
+          <button type="submit" class="action-btn btn-primary" style="font-weight: 700;">Conceder Acesso Admin</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- SCRIPTS -->
+  <script src="js/data.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

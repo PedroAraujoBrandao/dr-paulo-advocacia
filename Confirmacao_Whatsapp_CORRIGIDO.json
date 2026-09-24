@@ -1,0 +1,1289 @@
+{
+  "name": "Confirmação Whatsapp (Corrigido)",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Abre a 'caixa dupla' caso a mensagem venha encaminhada de outro workflow\nconst corpoOriginal = $json.body?.body || $json.body || $json;\nconst data = corpoOriginal.data || corpoOriginal;\n\n// Ignora mensagens enviadas por nós mesmos\nif (data.key && data.key.fromMe) {\n  return [];\n}\n\n// Ignora mensagens de status/broadcast\nif (data.key && data.key.remoteJid === 'status@broadcast') {\n  return [];\n}\n\n// Ignora mensagens de grupo\nif (data.key && data.key.remoteJid && data.key.remoteJid.includes('@g.us')) {\n  return [];\n}\n\n// Extrai o texto da mensagem (compatível com todos os formatos Evolution API / Baileys)\nconst msg = data.message || {};\nconst texto = msg.conversation \n  || msg.extendedTextMessage?.text \n  || msg.imageMessage?.caption\n  || msg.buttonsResponseMessage?.selectedDisplayText\n  || msg.buttonsResponseMessage?.selectedButtonId\n  || msg.templateButtonReplyMessage?.selectedId\n  || data.body\n  || data.text\n  || '';\n\n// Extrai e limpa o número (remove @s.whatsapp.net, @lid e sufixos de dispositivo :12)\nconst numeroRaw = data.key?.remoteJid || data.sender || '';\nlet numero = numeroRaw.replace(/@.*$/, '').replace(/:\\d+$/, '').trim();\nif (!numero || numero === '41940523442358' || numero.includes('43787365') || numero.length > 13) {\n  numero = '5511943787365';\n}\n\n// Se não tem texto, ignora\nif (!texto || texto.trim() === '') {\n  return [];\n}\n\n// Ignora mensagens do próprio bot (começam com emojis especiais)\nconst textoLimpo = texto.trim();\nif (textoLimpo.startsWith('✅') || \n    textoLimpo.startsWith('✏️') || \n    textoLimpo.startsWith('📋') || \n    textoLimpo.startsWith('🔄') || \n    textoLimpo.startsWith('⚖️')) {\n  return [];\n}\n\n// Normaliza texto: remove pontuações e acentos\nconst textoSemPontuacao = textoLimpo.replace(/[.,!?:;]/g, '').trim();\nconst textoUpper = textoSemPontuacao.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toUpperCase();\n\nconst isSim = textoUpper === 'SIM' || textoUpper === 'S' || textoUpper === 'OK' || textoUpper === 'APROVO' || textoUpper.startsWith('SIM ') || textoLimpo.includes('👍');\nconst isNao = textoUpper === 'NAO' || textoUpper === 'N' || textoUpper.startsWith('NAO ') || textoUpper.includes('CORRIG') || textoLimpo.includes('👎');\n\nreturn [{\n  json: {\n    texto: textoLimpo,\n    textoUpper: textoUpper,\n    isSim: isSim,\n    isNao: isNao,\n    numero: numero,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        224
+      ],
+      "id": "a923cb56-f7d1-4580-97f5-25199490d49d",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c948095b-5859-485f-97dc-0586bd541f63",
+              "leftValue": "={{ $json.numero }}",
+              "rightValue": "43787365",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "c948095b-5859-485f-97dc-0586bd541f64",
+              "leftValue": "={{ $json.numero }}",
+              "rightValue": "41940523442358",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "c948095b-5859-485f-97dc-0586bd541f65",
+              "leftValue": "={{ $json.numero }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -448,
+        224
+      ],
+      "id": "2e3ee772-0628-4837-9740-8d2f4dbe2711",
+      "name": "Verificar Número"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ca1d7138-7f17-448b-bc14-72e09e98fccf",
+              "leftValue": "={{ $json.isSim }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            },
+            {
+              "id": "ca1d7138-7f17-448b-bc14-72e09e98fcc2",
+              "leftValue": "={{ $json.textoUpper }}",
+              "rightValue": "SIM",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -224,
+        128
+      ],
+      "id": "f3c65ba7-15fe-4994-9d75-cb294047f281",
+      "name": "SIM?"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU",
+          "mode": "list",
+          "cachedResultName": "Controle de Publicações OAB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1304210002,
+          "mode": "list",
+          "cachedResultName": "Pendentes de Respostas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU/edit#gid=1304210002"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "PENDENTE"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        0,
+        0
+      ],
+      "id": "92f61ef5-6dd7-41b1-9311-9952b0b5b038",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pJge5jrbaJmHBPMT",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU",
+          "mode": "list",
+          "cachedResultName": "Controle de Publicações OAB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Controles OAB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Data Publicação": "={{ $('Get row(s) in sheet').item.json['Data Publicação'] }}",
+            "Processo": "={{ $('Get row(s) in sheet').item.json['Processo'] }}",
+            "Partes": "={{ $('Get row(s) in sheet').item.json['Partes'] }}",
+            "Vara": "={{ $('Get row(s) in sheet').item.json['Vara'] }}",
+            "Resumo": "={{ $('Get row(s) in sheet').item.json['Resumo'] }}",
+            "Ação Necessária": "={{ $('Get row(s) in sheet').item.json['Ação Necessária'] || '' }}",
+            "Urgente": "={{ $('Get row(s) in sheet').item.json['Urgente'] || '' }}",
+            "Prazo Limite": "={{ $('Get row(s) in sheet').item.json['Data Limite'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Data Publicação",
+              "displayName": "Data Publicação",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Processo",
+              "displayName": "Processo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Partes",
+              "displayName": "Partes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Vara",
+              "displayName": "Vara",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Resumo",
+              "displayName": "Resumo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Ação Necessária",
+              "displayName": "Ação Necessária",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Urgente",
+              "displayName": "Urgente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Prazo Limite",
+              "displayName": "Prazo Limite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        192,
+        0
+      ],
+      "id": "507b17a7-394e-4f1b-84ce-0b24f5bf738e",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pJge5jrbaJmHBPMT",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "d446193eaacf387f5f6b238ec667a4b41ea47abc18a62773a5740234572195eb@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "Controle de Publicações OAB"
+        },
+        "start": "={{ $('Get row(s) in sheet').item.json['Data Alerta'] || $now.toISO() }}",
+        "end": "={{ $('Get row(s) in sheet').item.json['Data Alerta'] ? new Date(new Date($('Get row(s) in sheet').item.json['Data Alerta']).getTime() + 3600000).toISOString() : $now.plus({ hours: 1 }).toISO() }}",
+        "additionalFields": {
+          "summary": "={{ $('Get row(s) in sheet').item.json['Processo'] }}"
+        }
+      },
+      "continueOnFail": true,
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "a9663172-6ac1-40b1-a0f7-9ca83158fe66",
+      "name": "Create an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "UyW34rHGXzByGxCH",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU",
+          "mode": "list",
+          "cachedResultName": "Controle de Publicações OAB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1304210002,
+          "mode": "list",
+          "cachedResultName": "Pendentes de Respostas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU/edit#gid=1304210002"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $('Get row(s) in sheet').item.json.row_number }}",
+            "Status": "APROVADO"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Data Publicação",
+              "displayName": "Data Publicação",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Processo",
+              "displayName": "Processo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tipo",
+              "displayName": "Tipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Vara",
+              "displayName": "Vara",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Partes",
+              "displayName": "Partes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Resumo",
+              "displayName": "Resumo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Prazo Dias",
+              "displayName": "Prazo Dias",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Data Limite",
+              "displayName": "Data Limite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Data Alerta",
+              "displayName": "Data Alerta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        640,
+        0
+      ],
+      "id": "6851a1b2-b70b-4338-bb2f-1c42329cc9f6",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pJge5jrbaJmHBPMT",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://147.15.122.131:8080/message/sendText/robo-oab",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Chosen@123"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $('Code in JavaScript').item.json.numero || '5511943787365' }}\",\n  \"text\": \"✅ *Tudo certo!*\\n\\nA publicação do processo *{{ $('Get row(s) in sheet').item.json.Processo || '' }}* foi salva na planilha e agendada no calendário.\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        864,
+        0
+      ],
+      "id": "bd24ee02-23e2-4e3a-838b-50a859b59624",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://147.15.122.131:8080/message/sendText/robo-oab",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Chosen@123"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Code in JavaScript').item.json.numero || '5511943787365' }}"
+            },
+            {
+              "name": "text",
+              "value": "✏️ *Entendido!*  Por favor, envie as correções necessárias em uma única mensagem.  ⚠️ Escreva tudo de uma vez para que a inteligência artificial possa corrigir o registro automaticamente."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        416,
+        176
+      ],
+      "id": "8f4e130a-2c65-4baf-abfd-2cd7455bf577",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU",
+          "mode": "list",
+          "cachedResultName": "Controle de Publicações OAB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1304210002,
+          "mode": "list",
+          "cachedResultName": "Pendentes de Respostas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU/edit#gid=1304210002"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $('Get row(s) in sheet2').item.json.row_number }}",
+            "Status": "AGUARDANDO_CORRECAO"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Data Publicação",
+              "displayName": "Data Publicação",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Processo",
+              "displayName": "Processo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tipo",
+              "displayName": "Tipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Vara",
+              "displayName": "Vara",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Partes",
+              "displayName": "Partes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Resumo",
+              "displayName": "Resumo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Prazo Dias",
+              "displayName": "Prazo Dias",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Data Limite",
+              "displayName": "Data Limite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Data Alerta",
+              "displayName": "Data Alerta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        640,
+        176
+      ],
+      "id": "0d444db2-d8fc-4e53-b647-0468c6730a7b",
+      "name": "Update row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pJge5jrbaJmHBPMT",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "11e29264-aab1-442b-a06b-d2bd91c65b8d",
+              "leftValue": "={{ $('Code in JavaScript').item.json.isNao }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            },
+            {
+              "id": "bb0b8804-5aa3-4439-923f-02ac5ec9a459",
+              "leftValue": "={{ $('Code in JavaScript').item.json.textoUpper }}",
+              "rightValue": "NAO",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        272
+      ],
+      "id": "574ae043-c390-4aca-930a-7fafa48eb2de",
+      "name": "NÃO?"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU",
+          "mode": "list",
+          "cachedResultName": "Controle de Publicações OAB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1304210002,
+          "mode": "list",
+          "cachedResultName": "Pendentes de Respostas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU/edit#gid=1304210002"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "AGUARDANDO_CORRECAO"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        192,
+        368
+      ],
+      "id": "48a04fb7-16d4-4eac-b53e-2c61b9b25b20",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pJge5jrbaJmHBPMT",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "=Aqui estão os dados originais da publicação que estão salvos no sistema:\n\n- Resumo: {{ $('Get row(s) in sheet1').item.json.Resumo }}\n- Ação Necessária: {{ $('Get row(s) in sheet1').item.json['Ação Necessária'] || 'N/A' }}\n- Urgente: {{ $('Get row(s) in sheet1').item.json.Urgente || 'NÃO' }}\n- Prazo Limite: {{ $('Get row(s) in sheet1').item.json['Data Limite'] }}\n- Processo: {{ $('Get row(s) in sheet1').item.json.Processo }}\n- Vara: {{ $('Get row(s) in sheet1').item.json.Vara }}\n\nO advogado mandou esta mensagem com correções:\n\"{{ $('Code in JavaScript').item.json.texto }}\"\n\nSua tarefa: \n1. Atualize os dados originais aplicando APENAS as correções solicitadas na mensagem do advogado. \n2. Mantenha todos os outros dados rigorosamente idênticos ao original.\n3. IMPORTANTE: Retorne a data limite no formato exato DD/MM/YYYY (exemplo: 02/09/2026).",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "resumo",
+              "description": "\"Você é um assistente jurídico. Analise o Teor Jurídico da Publicação e escreva um resumo ultra-prático de 1 a 2 linhas dizendo O QUE ACONTECEU e O QUE O JUIZ MANDOU FAZER. Exemplo: 'O juiz intimou para se manifestar sobre o laudo pericial em 5 dias'. Se o texto for apenas um cabeçalho sem decisão clara, escreva: 'Apenas intimação genérica de andamento, necessário consultar os autos'.\""
+            },
+            {
+              "name": "acao_necessaria",
+              "description": "\"Qual a ação prática? Exemplo: 'Apresentar manifestação', 'Acompanhar prazo', 'Comparecer à audiência'. Seja direto.\""
+            },
+            {
+              "name": "urgente",
+              "description": "É urgente? Responda apenas: SIM ou NÃO"
+            },
+            {
+              "name": "prazo_data",
+              "description": "Data limite para ação no formato dd/mm/aaaa, ou \"Sem prazo\" se não houver"
+            },
+            {
+              "name": "partes",
+              "description": "Os nomes das partes envolvidas no processo (Autor/Requerente x Réu/Requerido), se estiverem mencionados no texto. Ex: 'João da Silva (Autor) x Empresa X (Réu)'. Se não achar, escreva 'Não informado'."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        416,
+        368
+      ],
+      "id": "f2459524-889f-4906-a9a7-afb4bd237574",
+      "name": "Information Extractor",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "model": "groq/compound-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        416,
+        544
+      ],
+      "id": "d0bb8189-e8e5-4d6e-9f98-3d4235ea45bc",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "yCwAYJIsTxoPRSar",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU",
+          "mode": "list",
+          "cachedResultName": "Controle de Publicações OAB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1304210002,
+          "mode": "list",
+          "cachedResultName": "Pendentes de Respostas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU/edit#gid=1304210002"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $('Get row(s) in sheet1').item.json.row_number }}",
+            "Status": "PENDENTE"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Data Publicação",
+              "displayName": "Data Publicação",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Processo",
+              "displayName": "Processo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tipo",
+              "displayName": "Tipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Vara",
+              "displayName": "Vara",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Partes",
+              "displayName": "Partes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Resumo",
+              "displayName": "Resumo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Prazo Dias",
+              "displayName": "Prazo Dias",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Data Limite",
+              "displayName": "Data Limite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Data Alerta",
+              "displayName": "Data Alerta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        784,
+        368
+      ],
+      "id": "573fa985-4674-40a7-b1d3-593e765a812b",
+      "name": "Update row in sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pJge5jrbaJmHBPMT",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://147.15.122.131:8080/message/sendText/robo-oab",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Chosen@123"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $('Code in JavaScript').item.json.numero || '5511943787365' }}"
+            },
+            {
+              "name": "text",
+              "value": "=🔄 *DADOS CORRIGIDOS PELA DESKJET AI!* 🤖\n\nAqui está como ficou a nova versão do registro após as suas alterações:\n\n📝 *Resumo:* \n{{ $('Information Extractor').item.json.resumo || $('Information Extractor').item.json.output?.resumo || 'Sem alteração' }}\n\n⚡ *Ação Necessária:* \n{{ $('Information Extractor').item.json.acao_necessaria || $('Information Extractor').item.json.output?.acao_necessaria || 'Sem alteração' }}\n\n🚨 *Urgente:* {{ $('Information Extractor').item.json.urgente || $('Information Extractor').item.json.output?.urgente || 'Sem alteração' }}\n📅 *Prazo Limite:* {{ $('Information Extractor').item.json.prazo_data || $('Information Extractor').item.json.output?.prazo_data || 'Sem alteração' }}\n\n---\n*Você aprova este novo registro?*\n👍 Responda *SIM* para finalizar e agendar\n👎 Responda *NÃO* se quiser corrigir mais alguma coisa"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1008,
+        368
+      ],
+      "id": "d4165c94-deaa-41bd-9166-35dc88d32e23",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU",
+          "mode": "list",
+          "cachedResultName": "Controle de Publicações OAB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1304210002,
+          "mode": "list",
+          "cachedResultName": "Pendentes de Respostas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU/edit#gid=1304210002"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "PENDENTE"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        192,
+        176
+      ],
+      "id": "b1f540e5-a785-4f50-934d-337b1ec4676a",
+      "name": "Get row(s) in sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pJge5jrbaJmHBPMT",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "confirmacao-wpp",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -880,
+        224
+      ],
+      "id": "45e960c4-a139-483a-91c1-b776a87930f4",
+      "name": "Webhook",
+      "webhookId": "dee1b443-324f-4ce5-a56f-f1ff3c626f42",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "kPLAkkDxCmBhcilp",
+          "name": "Header Auth account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Verificar Número",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Número": {
+      "main": [
+        [
+          {
+            "node": "SIM?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SIM?": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NÃO?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Create an event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NÃO?": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "a6534ff6-80db-4c21-857f-9bc30f71c1a1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9abc9ac3c9e5432a3f4bc13952c401245f8888c04e93151ea81984760616ac61"
+  },
+  "nodeGroups": [],
+  "id": "5GkiThamZsJHN0yx",
+  "tags": []
+}
