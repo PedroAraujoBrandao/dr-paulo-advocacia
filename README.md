@@ -41,8 +41,9 @@ Sistema inteligente e completo para gestão de publicações oficiais, intimaç�
 │   ├── charts.js                 # Configuração e renderização dos gráficos
 │   └── data.js                   # Camada de persistência local (DataStore) e dados semente
 ├── index.html                    # Interface principal do sistema
-├── Agendamento_de_mensagens.json # Workflow N8N para agendamento
-├── Confirmacao_Whatsapp.json     # Workflow N8N para confirmação de prazos
+├── Agendamento_de_mensagens.json # Workflow N8N para agendamento de mensagens
+├── Confirmacao_Whatsapp.json     # Workflow N8N para confirmação de prazos via WhatsApp
+├── Disparo_de_mensagens.json     # Workflow N8N para disparo automático de lembretes e alertas
 └── README.md
 ```
 

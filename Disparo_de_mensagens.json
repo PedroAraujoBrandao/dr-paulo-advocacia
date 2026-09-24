@@ -1,0 +1,513 @@
+{
+  "name": "Disparo de mensagens",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "572d84fe-cf15-4293-bea9-9813ad2650ef",
+      "name": "Gatilho - Diário 08h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1456,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "cb23f94d-eda1-4ec5-a7bd-3aec071cd5c5",
+      "name": "Gatilho - Semanal Seg 06h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1456,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Detecta qual gatilho disparou este workflow\nlet tipo;\ntry {\n  $('Gatilho - Semanal Seg 06h').first();\n  tipo = 'SEMANAL';\n} catch(e) {\n  tipo = 'DIARIO';\n}\n\nconst now = new Date();\nlet inicio, fim;\n\nif (tipo === 'SEMANAL') {\n  // Semana atual: segunda a domingo\n  const segunda = new Date(now);\n  // Volta para segunda-feira da semana atual\n  const diff = now.getDay() === 0 ? 6 : now.getDay() - 1;\n  segunda.setDate(now.getDate() - diff);\n  segunda.setHours(0, 0, 0, 0);\n  const domingo = new Date(segunda);\n  domingo.setDate(segunda.getDate() + 6);\n  domingo.setHours(23, 59, 59, 999);\n  inicio = segunda.toISOString();\n  fim = domingo.toISOString();\n} else {\n  // Período: hoje\n  const hojeInicio = new Date(now);\n  hojeInicio.setHours(0, 0, 0, 0);\n  const hojeFim = new Date(now);\n  hojeFim.setHours(23, 59, 59, 999);\n  inicio = hojeInicio.toISOString();\n  fim = hojeFim.toISOString();\n}\n\n// Data formatada em pt-BR\nconst dataFormatada = now.toLocaleDateString('pt-BR', {\n  weekday: 'long',\n  year: 'numeric',\n  month: 'long',\n  day: 'numeric'\n});\n\nreturn [{ json: { inicio, fim, tipo, dataFormatada } }];"
+      },
+      "id": "167fda13-7b90-4adc-93f0-3fe9479e8e57",
+      "name": "Code - Determinar Período",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1184,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "d446193eaacf387f5f6b238ec667a4b41ea47abc18a62773a5740234572195eb@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "Controle de Publicações OAB"
+        },
+        "returnAll": true,
+        "options": {
+          "timeMin": "={{ $json.inicio }}",
+          "timeMax": "={{ $json.fim }}",
+          "singleEvents": true,
+          "orderBy": "startTime"
+        }
+      },
+      "id": "f583c6b0-1e6f-4f84-9f04-5e4bbaeea7a2",
+      "name": "Google Calendar - Buscar Eventos",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.1,
+      "position": [
+        -960,
+        96
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "UyW34rHGXzByGxCH",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "id": "a753f440-9e40-4f02-bbc9-a7944b902762",
+      "name": "Google Sheets - Buscar Histórico",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -752,
+        96
+      ],
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pJge5jrbaJmHBPMT",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Recupera período\nconst periodo = $('Code - Determinar Período').first().json;\nconst { tipo, inicio, fim, dataFormatada } = periodo;\n\n// Busca os eventos direto do Calendar\nconst calendarItems = $('Google Calendar - Buscar Eventos').all();\nconst calendarEvents = [];\n\nfor (const item of calendarItems) {\n  const d = item.json;\n  // Ignora se for o item vazio do 'Always Output Data'\n  if (Object.keys(d).length === 0) continue;\n  \n  if (d.summary !== undefined || d.start !== undefined) {\n    calendarEvents.push({\n      titulo: d.summary || 'Sem título',\n      inicio: d.start?.dateTime || d.start?.date || '',\n      fim: d.end?.dateTime || d.end?.date || '',\n      descricao: d.description || '',\n      local: d.location || ''\n    });\n  }\n}\n\n// Busca os registros direto da Planilha\nconst sheetsItems = $('Google Sheets - Buscar Histórico').all();\nconst sheetsRecords = [];\n\nfor (const item of sheetsItems) {\n  const d = item.json;\n  if (Object.keys(d).length === 0) continue;\n  sheetsRecords.push(d);\n}\n\n// Filtra sheets pelo período\nconst inicioDate = new Date(inicio);\nconst fimDate = new Date(fim);\nconst sheetsFiltrados = sheetsRecords.filter(row => {\n  const dataRow = new Date(row.Data || row.DataEvento || row['Data do Evento'] || '');\n  return dataRow >= inicioDate && dataRow <= fimDate;\n});\n\n// Função de prioridade\nfunction getPrioridade(texto) {\n  const t = (texto || '').toLowerCase();\n  if (t.includes('audiência') || t.includes('audiencia')) return 1;\n  if (t.includes('intimação') || t.includes('intimacao')) return 2;\n  if (t.includes('prazo fatal')) return 3;\n  if (t.includes('prazo')) return 4;\n  return 5;\n}\n\n// Ordena eventos\ncalendarEvents.sort((a, b) => {\n  const pa = getPrioridade(a.titulo + ' ' + a.descricao);\n  const pb = getPrioridade(b.titulo + ' ' + b.descricao);\n  if (pa !== pb) return pa - pb;\n  return new Date(a.inicio) - new Date(b.inicio);\n});\n\nconst totalEventos = calendarEvents.length;\n\n// System prompt\nconst systemPrompt = `Você é um assistente jurídico que organiza compromissos para um advogado.\\nSempre use markdown compatível com Telegram (negrito com *, itálico com _, etc.).\\nOrdenação OBRIGATÓRIA de prioridade:\\n⚖️ 1. Audiências\\n📨 2. Intimações\\n🚨 3. Urgentes\\n📌 4. Outros compromissos\\nSeja conciso, profissional e claro. Use emojis para facilitar a leitura.`;\n\n// User prompt\nlet userPrompt;\nif (tipo === 'SEMANAL') {\n  userPrompt = `Hoje é ${dataFormatada}.\\nCrie um *RESUMO SEMANAL COMPLETO* da semana atual.\\n\\nCOMPROMISSOS DA SEMANA (já ordenados por prioridade):\\n${JSON.stringify(calendarEvents, null, 2)}\\n\\nHISTÓRICO RELEVANTE DA PLANILHA:\\n${JSON.stringify(sheetsFiltrados.slice(0, 15), null, 2)}\\n\\nINSTRUÇÕES:\\n- Agrupe por dia da semana (Segunda a Domingo)\\n- Dentro de cada dia, respeite a ordem de prioridade\\n- No INÍCIO do resumo, destaque os 3 compromissos mais críticos da semana\\n- No FIM, inclua contadores: total de eventos, audiências, intimações e prazos`;\n} else {\n  userPrompt = `Hoje é ${dataFormatada}.\\nCrie um *RESUMO DIÁRIO* dos compromissos de hoje.\\n\\nCOMPROMISSOS DE HOJE (já ordenados por prioridade):\\n${JSON.stringify(calendarEvents, null, 2)}\\n\\nHISTÓRICO RELEVANTE DA PLANILHA:\\n${JSON.stringify(sheetsFiltrados.slice(0, 10), null, 2)}\\n\\nINSTRUÇÕES:\\n- Liste em ordem de prioridade (Audiência > Intimação > Prazo Fatal > Outros)\\n- Para cada item inclua: horário, tipo de ato, processo (se houver) e tribunal\\n- No FIM, inclua: ${totalEventos} compromisso(s) no total`;\n}\n\nreturn [{\n  json: {\n    totalEventos,\n    tipo,\n    dataFormatada,\n    inicio,\n    fim,\n    systemPrompt,\n    userPrompt,\n    calendarEvents\n  }\n}];"
+      },
+      "id": "12db8a5b-aa8f-4d10-8f07-6c07fd57145b",
+      "name": "Code - Preparar Dados para IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-eventos",
+              "leftValue": "={{ $json.totalEventos }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4a1072ea-2e38-43d0-b9a5-0374747739e4",
+      "name": "IF - Tem Eventos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'openai/gpt-oss-120b', messages: [ { role: 'system', content: $json.systemPrompt }, { role: 'user', content: $json.userPrompt } ], temperature: 0.3, max_tokens: 2500 }) }}",
+        "options": {}
+      },
+      "id": "70033500-161f-474b-8403-80e84c73f243",
+      "name": "OpenAI - Gerar Resumo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "yCwAYJIsTxoPRSar",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Recupera resposta da IA e dados do período\nlet aiContent = $json.choices[0].message.content;\nconst prepNode = $('Code - Preparar Dados para IA').first().json;\nconst { tipo, dataFormatada, totalEventos } = prepNode;\n\n// Remove apenas os # de cabeçalho\naiContent = aiContent.replace(/^#{1,3}\\s*/gm, '');\n\n// Cabeçalho conforme tipo\nconst emoji = tipo === 'SEMANAL' ? '📅' : '🗓️';\nconst tituloPrincipal = tipo === 'SEMANAL'\n  ? `${emoji} *RESUMO SEMANAL*`\n  : `${emoji} *RESUMO DO DIA*`;\n\nconst subtitulo = `${dataFormatada}`;\nconst separador = '─────────────────';\n\n// Monta mensagem final\nconst mensagem = `${tituloPrincipal}\\n${subtitulo}\\n${separador}\\n\\n${aiContent}\\n\\n${separador}\\n✉️ Gerado automaticamente pela sua Assistente Virtual`;\n\n// Assunto do email\nconst assunto = tipo === 'SEMANAL'\n  ? `📅 Resumo Semanal — ${new Date().toLocaleDateString('pt-BR')}`\n  : `🗓️ Resumo do Dia — ${new Date().toLocaleDateString('pt-BR')}`;\n\nreturn [{ json: { mensagem, assunto, tipo, totalEventos, dataFormatada } }];"
+      },
+      "id": "ad1f8b94-1a0a-46fd-a770-6de692d40cc4",
+      "name": "Code - Formatar Mensagem IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mensagem quando não há eventos no período\nconst periodo = $('Code - Determinar Período').first().json;\nconst { tipo, dataFormatada } = periodo;\n\nconst emoji = tipo === 'SEMANAL' ? '📅' : '🗓️';\nconst tituloPrincipal = tipo === 'SEMANAL'\n  ? `${emoji} *RESUMO SEMANAL*`\n  : `${emoji} *RESUMO DO DIA*`;\n\nconst separador = '─────────────────';\n\nconst mensagem = `${tituloPrincipal}\\n${dataFormatada}\\n${separador}\\n\\n✅ *Nenhum compromisso agendado*\\n\\nNão há compromissos registrados para este período.\\nAproveite para se organizar! 😊\\n\\n${separador}\\n✉️ Gerado automaticamente pela sua Assistente Virtual`;\n\nconst assunto = tipo === 'SEMANAL'\n  ? `📅 Resumo Semanal — Sem compromissos — ${new Date().toLocaleDateString('pt-BR')}`\n  : `🗓️ Resumo do Dia — Sem compromissos — ${new Date().toLocaleDateString('pt-BR')}`;\n\nreturn [{ json: { mensagem, assunto, tipo, totalEventos: 0, dataFormatada } }];"
+      },
+      "id": "cd148182-92ee-4e00-934e-1e369318ecaa",
+      "name": "Code - Mensagem Sem Compromissos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        192
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "53e31e50-b795-4181-8ef9-0a6241a7b035",
+      "name": "Merge - Unir Caminhos",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        416,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1KHn-NnO4rjRkAwiTZTTY0nsY2t6V2WRzMmG74yBn2Z8",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1KHn-NnO4rjRkAwiTZTTY0nsY2t6V2WRzMmG74yBn2Z8/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "TotalEventos": "={{ $('Code - Preparar Dados para IA').item.json.totalEventos }}",
+            "TipoResumo": "={{ $('Code - Preparar Dados para IA').item.json.tipo }}",
+            "DataHoraEnvio": "={{ $('Code - Preparar Dados para IA').item.json.dataFormatada }}",
+            "Assunto": "={{ $json.result.text }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "DataHoraEnvio",
+              "displayName": "DataHoraEnvio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "TipoResumo",
+              "displayName": "TipoResumo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assunto",
+              "displayName": "Assunto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "TotalEventos",
+              "displayName": "TotalEventos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "0b05a19d-d214-49aa-9852-94f2360ff265",
+      "name": "Google Sheets - Registrar Log de Envio",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        848,
+        128
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "pJge5jrbaJmHBPMT",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://147.15.122.131:8080/message/sendText/robo-oab",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "Chosen@123"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "5511943787365"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.mensagem }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        624,
+        128
+      ],
+      "id": "579f6bfc-04c9-49bc-94f2-39510ead203b",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gatilho - Diário 08h": {
+      "main": [
+        [
+          {
+            "node": "Code - Determinar Período",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gatilho - Semanal Seg 06h": {
+      "main": [
+        [
+          {
+            "node": "Code - Determinar Período",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Determinar Período": {
+      "main": [
+        [
+          {
+            "node": "Google Calendar - Buscar Eventos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar - Buscar Eventos": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Buscar Histórico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Buscar Histórico": {
+      "main": [
+        [
+          {
+            "node": "Code - Preparar Dados para IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Preparar Dados para IA": {
+      "main": [
+        [
+          {
+            "node": "IF - Tem Eventos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Tem Eventos?": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Gerar Resumo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Mensagem Sem Compromissos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Gerar Resumo": {
+      "main": [
+        [
+          {
+            "node": "Code - Formatar Mensagem IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Formatar Mensagem IA": {
+      "main": [
+        [
+          {
+            "node": "Merge - Unir Caminhos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Mensagem Sem Compromissos": {
+      "main": [
+        [
+          {
+            "node": "Merge - Unir Caminhos",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge - Unir Caminhos": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Registrar Log de Envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "fa09433f-ed07-49c0-ba4a-b5ff08d18274",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9abc9ac3c9e5432a3f4bc13952c401245f8888c04e93151ea81984760616ac61"
+  },
+  "nodeGroups": [],
+  "id": "PQj5hI5tk54sQ1W7",
+  "tags": []
+}
