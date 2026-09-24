@@ -1,5 +1,7 @@
 # Dr. Paulo Advocacia - Gestão de Publicações & Prazos Judiciais
 
+> 🌐 **Aplicação no ar (Produção):** [https://dr-paulo-advocacia-taupe.vercel.app](https://dr-paulo-advocacia-taupe.vercel.app)
+
 Sistema inteligente e completo para gestão de publicações oficiais, intimações, controle de prazos processuais e integração automatizada com WhatsApp e Google Workspace (Calendar / Sheets).
 
 ## 🚀 Funcionalidades Principais
