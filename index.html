@@ -223,9 +223,15 @@
         </div>
 
         <div class="header-actions">
-          <div style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--color-informativo); background: rgba(16,185,129,0.1); padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(16,185,129,0.2);">
-            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--color-informativo); box-shadow: 0 0 8px var(--color-informativo);"></span>
-            <span>N8N & Google Sheets Sincronizados</span>
+          <!-- BADGE DE SINCRONIZAÇÃO EM TEMPO REAL COM GOOGLE SHEETS -->
+          <div class="sync-badge-wrapper" id="sync-status-badge" title="Clique para sincronizar agora com o Google Sheets" style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--color-informativo); background: rgba(16,185,129,0.1); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(16,185,129,0.25); cursor: pointer; transition: all 0.2s ease;">
+            <span id="sync-status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: var(--color-informativo); box-shadow: 0 0 8px var(--color-informativo); transition: all 0.3s ease;"></span>
+            <span id="sync-status-text" style="font-weight: 500;">Google Sheets Sincronizado</span>
+            <button id="btn-sync-header" type="button" style="background: none; border: none; color: inherit; cursor: pointer; display: flex; align-items: center; padding: 2px; margin-left: 2px; opacity: 0.85;" title="Recarregar dados da planilha agora">
+              <svg id="sync-header-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.5s ease;">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
+            </button>
           </div>
 
           <!-- BOTÃO MODO CLARO / ESCURO GLOBAL NO TOPO -->
@@ -577,9 +583,17 @@
                 Conexão direta com a planilha alimentada pela automação N8N.
               </div>
               <div style="font-size: 0.85rem; background: var(--bg-app); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 8px;">
-                <div><strong>ID da Planilha:</strong> <code>1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU</code></div>
-                <div><strong>Abas:</strong> <code>Controles OAB</code> e <code>Pendentes de Respostas</code></div>
-                <div><strong>Modo:</strong> Leitura & Escrita (Atualização de Status)</div>
+                <div><strong>ID da Planilha:</strong> <code id="setting-sheet-id-display">1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU</code></div>
+                <div><strong>Abas integradas:</strong> <code>Controles OAB</code> e <code>Pendentes de Respostas</code></div>
+                <div><strong>Status:</strong> <span id="setting-sheet-status" style="color: var(--color-informativo); font-weight: 600;">● Online (Leitura Direta)</span></div>
+                <div style="margin-top: 6px;">
+                  <button type="button" class="action-btn" id="btn-sync-settings" style="width: 100%; justify-content: center; gap: 8px; padding: 10px; font-weight: 600;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                    </svg>
+                    <span>Sincronizar Planilha Agora</span>
+                  </button>
+                </div>
               </div>
             </div>
 

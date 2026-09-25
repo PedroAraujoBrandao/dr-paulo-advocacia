@@ -474,6 +474,242 @@ class DataStore {
     return null;
   }
 
+  // --- Sincronização em Tempo Real com Google Sheets (GViz API) ---
+  getLastSync() {
+    return localStorage.getItem(this.STORAGE_KEYS.LAST_SYNC || "dr_paulo_last_sync") || null;
+  }
+
+  setLastSync(isoDate) {
+    localStorage.setItem(this.STORAGE_KEYS.LAST_SYNC || "dr_paulo_last_sync", isoDate || new Date().toISOString());
+  }
+
+  async fetchGVizTable(sheetId, sheetName) {
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erro ao conectar à planilha (${response.status})`);
+    }
+    const text = await response.text();
+    const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
+    if (!match || !match[1]) {
+      throw new Error("Formato de resposta inesperado do Google Sheets.");
+    }
+    const data = JSON.parse(match[1]);
+    if (data.status === "error") {
+      throw new Error(data.errors?.[0]?.message || "Erro retornado pela planilha.");
+    }
+    return data.table;
+  }
+
+  parseGVizRow(cells, sourceSheet) {
+    if (!cells || cells.length === 0) return null;
+
+    const getVal = (idx) => {
+      const c = cells[idx];
+      if (!c) return "";
+      if (c.f !== undefined && c.f !== null) return String(c.f).trim();
+      if (c.v !== undefined && c.v !== null) return String(c.v).trim();
+      return "";
+    };
+
+    let statusAprovacao = "aprovado";
+    let dataPub = "";
+    let processo = "";
+    let tipoAto = "";
+    let vara = "";
+    let partes = "";
+    let resumo = "";
+    let acaoNecessaria = "";
+    let urgenteRaw = "";
+    let prazoDias = null;
+    let dataLimite = "";
+
+    if (sourceSheet === "Controles OAB") {
+      dataPub = getVal(0);
+      processo = getVal(1);
+      partes = getVal(2);
+      vara = getVal(3);
+      resumo = getVal(4);
+      acaoNecessaria = getVal(5);
+      urgenteRaw = getVal(6).toUpperCase();
+      dataLimite = getVal(7);
+      statusAprovacao = "aprovado";
+    } else {
+      // Aba: Pendentes de Respostas
+      const statusRaw = getVal(0).toUpperCase();
+      statusAprovacao = statusRaw.includes("APROVADO") ? "aprovado" : (statusRaw.includes("CORRECAO") ? "corrigir" : "pendente");
+      dataPub = getVal(1);
+      processo = getVal(2);
+      tipoAto = getVal(3);
+      vara = getVal(4);
+      partes = getVal(5);
+      resumo = getVal(6);
+      const pd = parseInt(getVal(7), 10);
+      if (!isNaN(pd)) prazoDias = pd;
+      dataLimite = getVal(8);
+    }
+
+    if (!processo || processo.length < 5) return null;
+
+    // Se o resumo contiver menção de dias (ex: 30 dias), extrai caso prazoDias seja nulo
+    if (!prazoDias && resumo) {
+      const match = resumo.match(/(\d+)\s*(?:dias|dia)/i);
+      if (match) {
+        prazoDias = parseInt(match[1], 10);
+      }
+    }
+
+    // Calcula data limite caso esteja vazia mas tenhamos dataPub e prazoDias
+    if ((!dataLimite || dataLimite === "Sem prazo") && dataPub && prazoDias) {
+      const m = dataPub.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+      if (m) {
+        const dt = new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
+        dt.setDate(dt.getDate() + prazoDias);
+        const dd = String(dt.getDate()).padStart(2, "0");
+        const mm = String(dt.getMonth() + 1).padStart(2, "0");
+        const yyyy = dt.getFullYear();
+        dataLimite = `${dd}/${mm}/${yyyy}`;
+      }
+    }
+
+    if (!dataLimite) {
+      dataLimite = "Sem prazo";
+    }
+
+    // Detecta tipo de ato se não veio preenchido
+    const rLow = (resumo || "").toLowerCase();
+    if (!tipoAto) {
+      if (rLow.includes("alvará") || rLow.includes("alvara")) tipoAto = "Decisão / Alvará";
+      else if (rLow.includes("réplica") || rLow.includes("replica")) tipoAto = "Intimação / Réplica";
+      else if (rLow.includes("audiência") || rLow.includes("audiencia")) tipoAto = "Audiência de Instrução";
+      else if (rLow.includes("sentença") || rLow.includes("sentenca")) tipoAto = "Sentença";
+      else if (rLow.includes("perícia") || rLow.includes("pericia")) tipoAto = "Perícia Técnica";
+      else tipoAto = "Intimação Judicial";
+    }
+
+    // Classificação inteligente de urgência
+    let nivelUrgencia = "normal";
+    if (urgenteRaw === "SIM" || rLow.includes("urgente") || tipoAto.includes("Alvará")) {
+      nivelUrgencia = "urgente";
+    } else if (rLow.includes("fatal") || rLow.includes("preclusão") || rLow.includes("preclusao")) {
+      nivelUrgencia = "prazo_fatal";
+    } else if (dataLimite === "Sem prazo") {
+      nivelUrgencia = "informativo";
+    }
+
+    // Identificação do tribunal
+    let tribunal = "TJSP";
+    const vUpper = (vara || "").toUpperCase();
+    if (vUpper.includes("TRT") || vUpper.includes("TRABALHO")) tribunal = "TRT-2";
+    else if (vUpper.includes("FEDERAL") || vUpper.includes("TRF")) tribunal = "TRF-3";
+
+    const procLimpo = processo.replace(/[^a-zA-Z0-9]/g, "");
+
+    return {
+      id: `pub_sheet_${procLimpo}`,
+      documentoId: `SP-2026-${procLimpo.slice(-6)}`,
+      numeroProcesso: processo,
+      tribunal,
+      vara: vara || "Foro Regional I - Santana - 3ª Vara da Família e Sucessões",
+      comarca: "São Paulo/SP",
+      tipoAto,
+      partes: partes || "Não informado",
+      dataDisponibilizacao: dataPub || new Date().toLocaleDateString("pt-BR"),
+      dataPublicacao: dataPub || new Date().toLocaleDateString("pt-BR"),
+      prazoDias,
+      dataLimite,
+      nivelUrgencia,
+      statusWhatsApp: "enviado",
+      statusLeitura: "lido",
+      statusAprovacao,
+      resumo: resumo || "Sem resumo disponível",
+      acaoNecessaria: acaoNecessaria || (tipoAto.includes("Alvará") ? "Acompanhar cumprimento de alvará e prazo estipulado pelo juízo." : "Verificar autos judiciais e providenciar manifestação."),
+      jornal: "Diário de Justiça Eletrônico",
+      assuntoOriginal: `Recorte Digital OAB/SP - ${processo}`,
+      corpoOriginalEmail: `Tribunal de Justiça do Estado de São Paulo\nPROCESSO: ${processo}\nVara: ${vara}\nData de Publicação: ${dataPub}\nPrazo: ${dataLimite}\n\nTeor do ato: ${resumo}\n- ADV: DR. PAULO BRANDÃO DE ARAUJO - OAB/SP 123.456`,
+      fromSheet: true
+    };
+  }
+
+  async syncFromGoogleSheets() {
+    const config = this.getConfig();
+    const sheetId = config.planilhaId || "1aGbAYJeH0IrpPG05McjU13CPR93wRuZGypLwhXKsfTU";
+
+    const currentPubs = this.getPublicacoes();
+    const itemsMap = new Map();
+
+    // Indexa publicações existentes (para preservar status de leitura e anotações do usuário)
+    currentPubs.forEach(p => {
+      const key = (p.numeroProcesso || "").replace(/[.\-/]/g, "").trim();
+      if (key) itemsMap.set(key, { ...p });
+    });
+
+    let sheetRecordsFound = 0;
+
+    // 1. Busca na aba Controles OAB (Publicações aprovadas definitivas)
+    try {
+      const tableOab = await this.fetchGVizTable(sheetId, "Controles OAB");
+      if (tableOab && tableOab.rows) {
+        for (const row of tableOab.rows) {
+          const item = this.parseGVizRow(row.c, "Controles OAB");
+          if (item) {
+            const key = item.numeroProcesso.replace(/[.\-/]/g, "").trim();
+            const existing = itemsMap.get(key);
+            if (existing) {
+              item.statusLeitura = existing.statusLeitura || item.statusLeitura;
+              item.id = existing.id || item.id;
+            }
+            itemsMap.set(key, item);
+            sheetRecordsFound++;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Aviso ao buscar Controles OAB:", err.message);
+    }
+
+    // 2. Busca na aba Pendentes de Respostas (Publicações pendentes ou recentes)
+    try {
+      const tablePend = await this.fetchGVizTable(sheetId, "Pendentes de Respostas");
+      if (tablePend && tablePend.rows) {
+        for (const row of tablePend.rows) {
+          const item = this.parseGVizRow(row.c, "Pendentes de Respostas");
+          if (item) {
+            const key = item.numeroProcesso.replace(/[.\-/]/g, "").trim();
+            const existing = itemsMap.get(key);
+            if (!existing || existing.fromSheet !== true) {
+              itemsMap.set(key, item);
+              sheetRecordsFound++;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Aviso ao buscar Pendentes de Respostas:", err.message);
+    }
+
+    // Converte de volta para lista e salva
+    const updatedPubs = Array.from(itemsMap.values());
+    this.savePublicacoes(updatedPubs);
+    const nowIso = new Date().toISOString();
+    this.setLastSync(nowIso);
+
+    // Dispara evento para interface se atualizar
+    window.dispatchEvent(new CustomEvent("google_sheets_synced", {
+      detail: {
+        total: updatedPubs.length,
+        fromSheet: sheetRecordsFound,
+        lastSync: nowIso
+      }
+    }));
+
+    return {
+      total: updatedPubs.length,
+      fromSheet: sheetRecordsFound,
+      lastSync: nowIso
+    };
+  }
+
   // Métricas para o Dashboard
   getMetrics() {
     const pubs = this.getPublicacoes();
@@ -512,3 +748,4 @@ class DataStore {
 
 // Instância global disponível na aplicação
 window.dataStore = new DataStore();
+

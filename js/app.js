@@ -405,20 +405,30 @@ document.addEventListener("DOMContentLoaded", () => {
         const formattedMonth = String(this.calendarMonth + 1).padStart(2, '0');
         const dateStr = `${formattedDay}/${formattedMonth}/${this.calendarYear}`;
 
-        // Busca publicações com prazo ou publicação nesta data
-        const dayPubs = pubs.filter(p => {
-          return p.dataLimite === dateStr || (p.dataLimite === "Sem prazo" && p.dataPublicacao === dateStr);
+        // Busca publicações com vencimento de prazo ou com data de publicação nesta data
+        const dayEvents = [];
+        pubs.forEach(p => {
+          if (p.dataLimite === dateStr) {
+            dayEvents.push({ pub: p, isPrazo: true });
+          } else if (p.dataPublicacao === dateStr) {
+            dayEvents.push({ pub: p, isPrazo: false });
+          }
         });
 
         let eventsHtml = "";
-        if (dayPubs.length > 0) {
-          eventsHtml = dayPubs.map(p => {
+        if (dayEvents.length > 0) {
+          eventsHtml = dayEvents.map(item => {
+            const p = item.pub;
+            const isPrazo = item.isPrazo;
             const color = settings.coresUrgencia[p.nivelUrgencia] || "#FF7A00";
-            const icon = p.nivelUrgencia === "urgente" ? "🚨" : p.nivelUrgencia === "prazo_fatal" ? "⚡" : p.nivelUrgencia === "informativo" ? "ℹ️" : "📌";
+            const icon = isPrazo 
+              ? (p.nivelUrgencia === "urgente" ? "🚨" : p.nivelUrgencia === "prazo_fatal" ? "⚡" : "📌")
+              : "📄";
+            const prefix = isPrazo ? "Prazo" : "Pub";
             return `
-              <div class="cal-event-pill" draggable="true" style="background-color: ${color}20; color: ${color}; border: 1px solid ${color}55;" data-pub-id="${p.id}" title="${p.tipoAto} - ${p.numeroProcesso} | Partes: ${p.partes} (Arraste para mudar a data)">
+              <div class="cal-event-pill" draggable="true" style="background-color: ${color}20; color: ${color}; border: 1px solid ${color}55;" data-pub-id="${p.id}" title="${prefix}: ${p.tipoAto} - ${p.numeroProcesso} | Partes: ${p.partes} (Limite: ${p.dataLimite})">
                 <span>${icon}</span>
-                <span style="overflow: hidden; text-overflow: ellipsis; pointer-events: none;">${p.numeroProcesso.slice(0, 11)}...</span>
+                <span style="overflow: hidden; text-overflow: ellipsis; pointer-events: none;">${prefix}: ${p.numeroProcesso.slice(0, 10)}...</span>
               </div>
             `;
           }).join("");
@@ -1066,6 +1076,9 @@ document.addEventListener("DOMContentLoaded", () => {
       this.applyThemeAndColors();
       this.renderUserSessionUI();
       this.navigate(this.currentTab || "agenda");
+
+      // Sincroniza em segundo plano com a planilha do Google Sheets
+      this.syncGoogleSheetsData(false);
     },
 
     renderUserSessionUI() {
@@ -1260,6 +1273,75 @@ document.addEventListener("DOMContentLoaded", () => {
     },
 
     // =========================================================================
+    // SINCRONIZAÇÃO EM TEMPO REAL COM GOOGLE SHEETS
+    // =========================================================================
+    async syncGoogleSheetsData(showToastNotification = false) {
+      const badge = document.getElementById("sync-status-badge");
+      const dot = document.getElementById("sync-status-dot");
+      const text = document.getElementById("sync-status-text");
+      const icon = document.getElementById("sync-header-icon");
+      const settingStatus = document.getElementById("setting-sheet-status");
+
+      if (text) text.textContent = "Sincronizando Planilha...";
+      if (dot) {
+        dot.style.background = "var(--primary-orange)";
+        dot.style.boxShadow = "0 0 8px var(--primary-orange)";
+      }
+      if (icon) icon.style.animation = "spin 1s linear infinite";
+      if (settingStatus) {
+        settingStatus.textContent = "⏳ Conectando e lendo dados...";
+        settingStatus.style.color = "var(--primary-orange)";
+      }
+
+      try {
+        const result = await window.dataStore.syncFromGoogleSheets();
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+        if (text) text.textContent = `Google Sheets Sincronizado (${timeStr})`;
+        if (dot) {
+          dot.style.background = "var(--color-informativo)";
+          dot.style.boxShadow = "0 0 8px var(--color-informativo)";
+        }
+        if (icon) icon.style.animation = "none";
+        if (badge) {
+          badge.title = `Última sincronização: ${timeStr} (${result.total} publicações carregadas). Clique para atualizar.`;
+        }
+        if (settingStatus) {
+          settingStatus.textContent = `● Online (Última sync: ${timeStr} - ${result.total} publicações)`;
+          settingStatus.style.color = "var(--color-informativo)";
+        }
+
+        // Re-renderiza a tela atual
+        if (this.currentTab === "dashboard") this.renderDashboard();
+        if (this.currentTab === "agenda") {
+          this.renderAgenda();
+          if (this.agendaViewMode === "calendario") this.renderCalendarView();
+        }
+        if (this.currentTab === "emails") this.renderEmails();
+
+        if (showToastNotification) {
+          this.showToast(`Planilha sincronizada! ${result.total} publicações carregadas.`);
+        }
+      } catch (err) {
+        console.warn("Erro ao sincronizar com Google Sheets:", err);
+        if (text) text.textContent = "Erro de Sincronização";
+        if (dot) {
+          dot.style.background = "var(--color-urgente)";
+          dot.style.boxShadow = "0 0 8px var(--color-urgente)";
+        }
+        if (icon) icon.style.animation = "none";
+        if (settingStatus) {
+          settingStatus.textContent = `⚠️ Erro: ${err.message}`;
+          settingStatus.style.color = "var(--color-urgente)";
+        }
+        if (showToastNotification) {
+          this.showToast(`Erro ao conectar à planilha: ${err.message}`);
+        }
+      }
+    },
+
+    // =========================================================================
     // NOTIFICAÇÕES TOAST
     // =========================================================================
     showToast(message) {
@@ -1282,6 +1364,18 @@ document.addEventListener("DOMContentLoaded", () => {
     // CONFIGURAÇÃO DOS EVENTOS
     // =========================================================================
     setupEventListeners() {
+      // Sincronização em tempo real com Google Sheets ao clicar no badge ou botão
+      document.getElementById("sync-status-badge")?.addEventListener("click", () => {
+        this.syncGoogleSheetsData(true);
+      });
+      document.getElementById("btn-sync-header")?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.syncGoogleSheetsData(true);
+      });
+      document.getElementById("btn-sync-settings")?.addEventListener("click", () => {
+        this.syncGoogleSheetsData(true);
+      });
+
       // Navegação por abas principais
       document.querySelectorAll(".nav-link").forEach(link => {
         link.addEventListener("click", (e) => {

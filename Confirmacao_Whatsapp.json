@@ -282,10 +282,11 @@
           "mode": "list",
           "cachedResultName": "Controle de Publicações OAB"
         },
-        "start": "={{ $('Get row(s) in sheet').item.json['Data Alerta'] || $now.toISO() }}",
-        "end": "={{ $('Get row(s) in sheet').item.json['Data Alerta'] ? new Date(new Date($('Get row(s) in sheet').item.json['Data Alerta']).getTime() + 3600000).toISOString() : $now.plus({ hours: 1 }).toISO() }}",
+        "start": "={{ $('Get row(s) in sheet').item.json['Data Alerta'] || ($('Get row(s) in sheet').item.json['Data Limite'] && $('Get row(s) in sheet').item.json['Data Limite'].includes('/') ? $('Get row(s) in sheet').item.json['Data Limite'].split('/').reverse().join('-') + 'T09:00:00.000-03:00' : $now.toISO()) }}",
+        "end": "={{ $('Get row(s) in sheet').item.json['Data Alerta'] ? new Date(new Date($('Get row(s) in sheet').item.json['Data Alerta']).getTime() + 3600000).toISOString() : ($('Get row(s) in sheet').item.json['Data Limite'] && $('Get row(s) in sheet').item.json['Data Limite'].includes('/') ? $('Get row(s) in sheet').item.json['Data Limite'].split('/').reverse().join('-') + 'T10:00:00.000-03:00' : $now.plus({ hours: 1 }).toISO()) }}",
         "additionalFields": {
-          "summary": "={{ $('Get row(s) in sheet').item.json['Processo'] }}"
+          "summary": "={{ 'Prazo: ' + $('Get row(s) in sheet').item.json['Processo'] }}",
+          "description": "={{ '🏛️ Vara: ' + ($('Get row(s) in sheet').item.json['Vara'] || '') + '\\n👥 Partes: ' + ($('Get row(s) in sheet').item.json['Partes'] || '') + '\\n📝 Resumo: ' + ($('Get row(s) in sheet').item.json['Resumo'] || '') + '\\n⚡ Ação Necessária: ' + ($('Get row(s) in sheet').item.json['Ação Necessária'] || '') }}"
         }
       },
       "continueOnFail": true,
